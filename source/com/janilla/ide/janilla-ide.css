@@ -1,0 +1,13 @@
+janilla-ide {
+  display: flex;
+  height: 100%;
+
+  entry-tree {
+    flex: 25% 0;
+    overflow: auto;
+  }
+
+  file-editor {
+    flex: 1;
+  }
+}

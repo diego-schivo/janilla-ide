@@ -1,0 +1,13 @@
+entry-node {
+  display: block;
+
+  > a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  &[data-active] > a {
+    background: gray;
+    color: black;
+  }
+}

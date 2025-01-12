@@ -1,0 +1,14 @@
+entry-tree {
+  ul {
+    list-style: none;
+    padding-left: 1rem;
+  }
+
+  li:has([data-expandable])::marker {
+    content: "\2bc8  ";
+  }
+
+  li:has([data-expanded])::marker {
+    content: "\2bc6  ";
+  }
+}
