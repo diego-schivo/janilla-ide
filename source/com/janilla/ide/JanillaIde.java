@@ -29,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -111,8 +112,8 @@ public class JanillaIde {
 
 	@Handle(method = "GET", path = "/|/edit/(.+)")
 	public Index index(Path path) throws IOException {
-		return new Index(
-				new State(new EntryTree(visit(directory, path), path), path != null ? new FileEditor(path) : null));
+		return new Index(new State(new EntryTree(visit(directory, path), path),
+				new MultiContent(path != null ? List.of(new FileEditor(path)) : List.of())));
 	}
 
 	protected Map<String, EntryNode> visit(Path directory, Path path) {
@@ -133,13 +134,16 @@ public class JanillaIde {
 	}
 
 	@Render(renderer = JsonRenderer.class)
-	public record State(EntryTree entryTree, FileEditor fileEditor) {
+	public record State(EntryTree entryTree, MultiContent multiContent) {
 	}
 
 	public record EntryTree(Map<String, EntryNode> nodes, Path path) {
 	}
 
 	public record EntryNode(Path path, boolean expandable, Map<String, EntryNode> children) {
+	}
+
+	public record MultiContent(List<?> contents) {
 	}
 
 	public record FileEditor(Path path) {

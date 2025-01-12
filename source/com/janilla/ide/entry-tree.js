@@ -34,7 +34,7 @@ export default class EntryTree extends FlexibleElement {
 	}
 
 	get state() {
-		return this.closest("janilla-ide").state?.entryTree;
+		return this.closest("janilla-ide").state.entryTree;
 	}
 
 	set state(x) {

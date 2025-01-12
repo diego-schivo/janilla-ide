@@ -1,13 +1,33 @@
 janilla-ide {
-  display: flex;
+  display: grid;
+  grid: auto 1fr / 1fr 3fr;
   height: 100%;
+  
+  > header {
+  	grid-area: auto / span 2;
 
-  entry-tree {
-    flex: 25% 0;
-    overflow: auto;
+  	ul {
+  	  display: flex;
+  	  flex-direction: row;
+  	  gap: 1rem;
+  	  list-style: none;
+  	  margin: 0;
+  	  padding: 0;
+  	}
   }
 
-  file-editor {
-    flex: 1;
+  > aside,
+  > main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  entry-tree,
+  multi-content {
+    flex: 1 1 0;
+  }
+
+  entry-tree {
+    overflow: auto;
   }
 }

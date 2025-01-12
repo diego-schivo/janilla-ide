@@ -21,12 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { FlexibleElement } from "./flexible-element.js";
+import { SlottableElement } from "./slottable-element.js";
 
-export default class FileEditor extends FlexibleElement {
+export default class FileEditor extends SlottableElement {
 
 	static get observedAttributes() {
-		return ["data-path"];
+		return ["data-path", "slot"];
 	}
 
 	static get templateName() {
@@ -34,7 +34,10 @@ export default class FileEditor extends FlexibleElement {
 	}
 
 	get state() {
-		return this.closest("janilla-ide").state?.fileEditor;
+		let i = 0;
+		for (let el = this.parentElement.firstElementChild; el !== this; el = el.nextElementSibling)
+			i++;
+		return this.closest("multi-content").state.contents[i];
 	}
 
 	constructor() {
@@ -69,6 +72,20 @@ export default class FileEditor extends FlexibleElement {
 		const s = this.state;
 		if (s)
 			s.text ??= s.path ? await (await fetch(`/api/files/${s.path}`)).text() : null;
+		this.appendChild(this.interpolateDom({
+			$template: "",
+			...this.state
+		}));
+	}
+
+	async computeState() {
+		// console.log("FileEditor.computeState");
+		const s = this.state;
+		s.text = await (await fetch(`/api/files/${s.path}`)).text();
+	}
+
+	renderState() {
+		// console.log("FileEditor.renderState");
 		this.appendChild(this.interpolateDom({
 			$template: "",
 			...this.state

@@ -21,26 +21,42 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import EntryNode from "./entry-node.js";
-import EntryTree from "./entry-tree.js";
-import FileEditor from "./file-editor.js";
-import JanillaIde from "./janilla-ide.js";
-import MultiContent from "./multi-content.js";
+import { FlexibleElement } from "./flexible-element.js";
 
-customElements.define("entry-node", EntryNode);
-customElements.define("entry-tree", EntryTree);
-customElements.define("file-editor", FileEditor);
-customElements.define("janilla-ide", JanillaIde);
-customElements.define("multi-content", MultiContent);
+export default class MultiContent extends FlexibleElement {
 
-const initState = () => {
-	const el = document.getElementById("state");
-	const s = el ? JSON.parse(el.text) : {};
-	history.replaceState(s, "");
-	dispatchEvent(new CustomEvent("popstate"));
+	static get templateName() {
+		return "multi-content";
+	}
+
+	get state() {
+		return this.closest("janilla-ide").state.multiContent;
+	}
+
+	constructor() {
+		super();
+		this.attachShadow({ mode: "open" });
+	}
+
+	async updateDisplay() {
+		// console.log("MultiContent.updateDisplay");
+		this.shadowRoot.appendChild(this.interpolateDom({
+			$template: "shadow",
+			items: [{
+				$template: "item",
+				name: "Foo"
+			}, {
+				$template: "item",
+				name: "Bar"
+			}]
+		}));
+		this.appendChild(this.interpolateDom({
+			$template: "",
+			contents: this.state.contents?.map((x, i) => ({
+				$template: "content",
+				...x,
+				slot: i === 0 ? "content" : null
+			}))
+		}));
+	}
 }
-
-if (document.readyState === "loading")
-	document.addEventListener("DOMContentLoaded", initState);
-else
-	initState();
