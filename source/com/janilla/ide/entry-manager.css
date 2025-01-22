@@ -1,0 +1,15 @@
+entry-manager {
+  flex: 1;
+  gap: 1rem;
+
+  &,
+  form,
+  label {
+    display: flex;
+    flex-direction: column;
+  }
+
+  form {
+    gap: 1rem;
+  }
+}

@@ -41,6 +41,7 @@ import com.janilla.net.Server;
 import com.janilla.persistence.ApplicationPersistenceBuilder;
 import com.janilla.persistence.Persistence;
 import com.janilla.reflect.Factory;
+import com.janilla.reflect.Flatten;
 import com.janilla.util.Util;
 import com.janilla.web.ApplicationHandlerBuilder;
 import com.janilla.web.Handle;
@@ -112,19 +113,22 @@ public class JanillaIde {
 
 	@Handle(method = "GET", path = "/|/entry/(.+)")
 	public Index index(Path path) throws IOException {
-		return new Index(new State(path, new EntryTree(visit(directory, path)),
-				new EntryList(List.of(new EntryItem(path, 0, List.of(new EntryManager(), new FileEditor()))))));
+		return new Index(new State(new EntryTree(visit(directory, path)), new EntryList(
+				path != null ? List.of(new EntryEditor(null), new EntryEditor(path)) : List.of(new EntryEditor(null))),
+				path));
 	}
 
 	protected Map<String, EntryNode> visit(Path directory, Path path) {
-		var ee = EntryApi.list(directory, true);
+		var ee = EntryApi.list2(directory);
+		var d = this.directory.relativize(directory);
 		var p0 = path != null && path.getNameCount() > 0 ? path.getName(0) : null;
 		return ee.stream().map(x -> {
-			var e1 = x.children() != null && !x.children().isEmpty();
-			var e2 = e1 && p0 != null && x.name().equals(p0.getFileName().toString());
-			return new EntryNode(x.name(), e1, e2,
-					e2 && p0 != null ? visit(directory.resolve(x.name()), p0.relativize(path)) : null);
-		}).collect(Collectors.toMap(x -> x.name(), x -> x, (x, _) -> x, LinkedHashMap::new));
+			var p = d.resolve(x.name());
+			return new EntryNode(p, x,
+					x.expandable() && p0 != null && p.endsWith(p0)
+							? visit(directory.resolve(x.name()), p0.relativize(path))
+							: null);
+		}).collect(Collectors.toMap(x -> x.path.getFileName().toString(), x -> x, (x, _) -> x, LinkedHashMap::new));
 	}
 
 	@Render(template = "index.html")
@@ -132,27 +136,18 @@ public class JanillaIde {
 	}
 
 	@Render(renderer = JsonRenderer.class)
-	public record State(Path path, EntryTree entryTree, EntryList entryList) {
+	public record State(EntryTree entryTree, EntryList entryList, Path path) {
 	}
 
 	public record EntryTree(Map<String, EntryNode> nodes) {
 	}
 
-	public record EntryNode(String name, boolean expandable, boolean expanded, Map<String, EntryNode> children) {
+	public record EntryNode(Path path, @Flatten Entry entry) {
 	}
 
-	public record EntryList(List<EntryItem> items) {
+	public record EntryList(List<?> contents) {
 	}
 
-	public record EntryItem(Path path, int view, List<EntryView> views) {
-	}
-
-	public interface EntryView {
-	}
-
-	public record EntryManager() implements EntryView {
-	}
-
-	public record FileEditor() implements EntryView {
+	public record EntryEditor(Path path) {
 	}
 }

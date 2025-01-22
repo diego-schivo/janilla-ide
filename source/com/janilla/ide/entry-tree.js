@@ -76,7 +76,7 @@ export default class EntryTree extends FlexibleElement {
 				const j = await (await fetch(`/api/entries/${p}`)).json();
 				s.children = Object.fromEntries(j.map(x => ([x.name, {
 					path: [p, x.name].join("/"),
-					expandable: x.expandable
+					...x
 				}])));
 			} else
 				delete s.children;
@@ -110,14 +110,14 @@ export default class EntryTree extends FlexibleElement {
 			};
 			history.pushState(this.closest("janilla-ide").state, "", "/");
 		}
-		const ap = this.dataset.path;
+		const p = this.closest("janilla-ide").state.path;
 		this.appendChild(this.interpolateDom({
 			$template: "",
 			items: Object.values(this.state.nodes).map(x => ({
 				$template: "item",
 				...x,
 				expanded: !!x.children,
-				active: x.path === ap
+				active: x.name === p
 			}))
 		}));
 	}

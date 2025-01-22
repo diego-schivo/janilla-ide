@@ -26,17 +26,27 @@ import { FlexibleElement } from "./flexible-element.js";
 export default class EntryNode extends FlexibleElement {
 
 	static get observedAttributes() {
-		return ["data-path", "data-expandable", "data-expanded"];
+		return ["data-name", "data-directory", "data-expandable", "data-expanded"];
 	}
 
 	static get templateName() {
 		return "entry-node";
 	}
 
+	get path() {
+		let n = this;
+		const xx = [];
+		do {
+			xx.push(n.dataset.name);
+			n = n.parentElement.closest("entry-node, entry-tree");
+		} while (n.tagName.toLowerCase() !== "entry-tree");
+		return xx.reverse().join("/");
+	}
+
 	get state() {
 		let s = this.closest("entry-tree").state;
 		let nn = s.nodes;
-		for (const x of this.dataset.path.split("/")) {
+		for (const x of this.path.split("/")) {
 			s = nn[x];
 			nn = s.children;
 		}
@@ -50,18 +60,18 @@ export default class EntryNode extends FlexibleElement {
 	async updateDisplay() {
 		// console.log("EntryNode.updateDisplay");
 		const s = this.state;
-		const ap = this.closest("entry-tree").dataset.path;
+		const p1 = this.path;
+		const p2 = this.closest("janilla-ide").state.path;
 		this.appendChild(this.interpolateDom({
 			$template: "",
 			...s,
-			name: s.path.split("/").at(-1),
 			content: s.children ? {
 				$template: "content",
 				items: Object.values(s.children).map(x => ({
 					$template: "item",
 					...x,
 					expanded: !!x.children,
-					active: x.path === ap
+					active: `${p1}/${x.name}` === p2
 				}))
 			} : null
 		}));

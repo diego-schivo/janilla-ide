@@ -24,15 +24,9 @@
 package com.janilla.ide;
 
 import java.io.IOException;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.janilla.http.HttpRequest;
-import com.janilla.http.HttpResponse;
-import com.janilla.http.HttpWritableByteChannel;
 import com.janilla.web.BadRequestException;
 import com.janilla.web.Handle;
 
@@ -41,24 +35,22 @@ public class FileApi {
 	private Path directory = Path.of(System.getProperty("user.home")).resolve("gittmp");
 
 	@Handle(method = "GET", path = "/api/files/(.*)")
-	public void read(String path, HttpResponse response) throws IOException {
+	public File read(Path path) throws IOException {
 		System.out.println("FileApi.read, path=" + path);
 		var p = directory.resolve(path);
 		if (!Files.isRegularFile(p))
-			throw new BadRequestException(path);
+			throw new BadRequestException(path.toString());
 		var s = Files.readString(p);
-		response.setStatus(200);
-		response.setHeaderValue("content-type", "text/plain");
-		((HttpWritableByteChannel) response.getBody()).write(StandardCharsets.UTF_8.encode(s), true);
+		return new File(path, s);
 	}
 
-	@Handle(method = "POST", path = "/api/files/(.*)")
-	public void write(String path, HttpRequest request, HttpResponse response) throws IOException {
-		System.out.println("FileApi.write, path=" + path);
+	@Handle(method = "PUT", path = "/api/files/(.*)")
+	public File update(Path path, File file) throws IOException {
+		System.out.println("FileApi.update, path=" + path);
 		var p = directory.resolve(path);
 		if (!Files.isRegularFile(p))
-			throw new BadRequestException(path);
-		var s = new String(Channels.newInputStream((ReadableByteChannel) request.getBody()).readAllBytes());
+			throw new BadRequestException(path.toString());
+		var s = file.content();
 		var n = p.getFileName().toString();
 		var i = n.lastIndexOf('.');
 		s = switch (n.substring(i + 1).toLowerCase()) {
@@ -70,8 +62,6 @@ public class FileApi {
 		default -> s;
 		};
 		Files.writeString(p, s);
-		response.setStatus(200);
-		response.setHeaderValue("content-type", "text/plain");
-		((HttpWritableByteChannel) response.getBody()).write(StandardCharsets.UTF_8.encode(s), true);
+		return file;
 	}
 }

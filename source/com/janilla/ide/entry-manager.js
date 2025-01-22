@@ -23,40 +23,44 @@
  */
 import { FlexibleElement } from "./flexible-element.js";
 
-export default class MultiContent extends FlexibleElement {
+export default class EntryManager extends FlexibleElement {
 
 	static get templateName() {
-		return "multi-content";
-	}
-
-	get state() {
-		return this.closest("janilla-ide").state.multiContent;
+		return "entry-manager";
 	}
 
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
+	}
+
+	connectedCallback() {
+		// console.log("EntryManager.connectedCallback");
+		super.connectedCallback();
+		this.addEventListener("submit", this.handleSubmit);
+	}
+
+	disconnectedCallback() {
+		// console.log("EntryManager.disconnectedCallback");
+		this.removeEventListener("submit", this.handleSubmit);
+	}
+
+	handleSubmit = async event => {
+		// console.log("EntryManager.handleSubmit", event);
+		event.preventDefault();
+		event.stopPropagation();
+		const s = this.state;
+		Object.assign(s, await (await fetch(`/api/files/${s.path}`, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(Object.fromEntries(new FormData(event.target)))
+		})).json());
+		this.requestUpdate();
 	}
 
 	async updateDisplay() {
-		// console.log("MultiContent.updateDisplay");
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
-			items: [{
-				$template: "item",
-				name: "Foo"
-			}, {
-				$template: "item",
-				name: "Bar"
-			}]
-		}));
+		// console.log("EntryManager.updateDisplay");
 		this.appendChild(this.interpolateDom({
-			$template: "",
-			contents: this.state.contents?.map((x, i) => ({
-				$template: "content",
-				...x,
-				slot: i === 0 ? "content" : null
-			}))
+			$template: ""
 		}));
 	}
 }

@@ -4,7 +4,8 @@
 <template id="item">
   <li>
     <entry-node
-    	data-name="${name}"
+    	data-path="${path}"
+    	data-directory="${directory}"
     	data-expandable="${expandable}"
     	data-expanded="${expanded}"
     	data-active="${active}">

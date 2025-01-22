@@ -23,60 +23,65 @@
  */
 import { FlexibleElement } from "./flexible-element.js";
 
-export default class FileEditor extends FlexibleElement {
+export default class EntryItem extends FlexibleElement {
 
 	static get templateName() {
-		return "file-editor";
+		return "entry-item";
 	}
 
 	get state() {
 		let i = 0;
 		for (let el = this.parentElement.firstElementChild; el !== this; el = el.nextElementSibling)
 			i++;
-		return this.closest("entry-item").state.views[i];
+		return this.closest("entry-list").state.items[i];
 	}
 
 	constructor() {
 		super();
+		this.attachShadow({ mode: "open" });
 	}
 
 	connectedCallback() {
-		// console.log("FileEditor.connectedCallback");
+		// console.log("EntryItem.connectedCallback");
 		super.connectedCallback();
-		this.addEventListener("submit", this.handleSubmit);
+		this.addEventListener("click", this.handleClick);
 	}
 
 	disconnectedCallback() {
-		// console.log("FileEditor.disconnectedCallback");
-		this.removeEventListener("submit", this.handleSubmit);
+		// console.log("EntryItem.disconnectedCallback");
+		this.removeEventListener("click", this.handleClick);
 	}
 
-	handleSubmit = async event => {
-		// console.log("FileEditor.handleSubmit", event);
-		event.preventDefault();
-		event.stopPropagation();
-		this.state.text = await (await fetch(event.target.action, {
-			method: event.target.method,
-			headers: { "content-type": "text/plain" },
-			body: new FormData(event.target).get("text")
-		})).text();
-		this.requestUpdate();
+	handleClick = async event => {
+		// console.log("EntryItem.handleClick", event);
+		const a = event.composedPath().find(x => x.tagName?.toLowerCase() === "a");
+		if (a?.href) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.state.view = parseInt(a.textContent);
+			this.requestUpdate();
+		}
 	}
 
 	async updateDisplay() {
-		// console.log("FileEditor.updateDisplay");
+		// console.log("EntryItem.updateDisplay");
 		const s = this.state;
-		/*
-		if (this.slot)
-			s.text ??= await (async () => {
-				return s.path ? await(await fetch(`/api/files/${s.path}`)).text() : null;
-			})()
-		else
-			s.text = undefined;
-		*/
+		this.shadowRoot.appendChild(this.interpolateDom({
+			$template: "shadow",
+			items: s.views.map((x, i) => ({
+				$template: "shadow-item",
+				...x,
+				class: i === s.view ? "active" : null,
+				name: i.toString()
+			}))
+		}));
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			...s
+			views: s.views.map((x, i) => ({
+				$template: "view",
+				...x,
+				slot: i === s.view ? "content" : null
+			}))
 		}));
 	}
 }

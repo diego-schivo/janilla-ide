@@ -21,30 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import EntryItem from "./entry-item.js";
-import EntryList from "./entry-list.js";
-import EntryManager from "./entry-manager.js";
-import EntryNode from "./entry-node.js";
-import EntryTree from "./entry-tree.js";
-import FileEditor from "./file-editor.js";
-import JanillaIde from "./janilla-ide.js";
+import { FlexibleElement } from "./flexible-element.js";
 
-customElements.define("entry-item", EntryItem);
-customElements.define("entry-list", EntryList);
-customElements.define("entry-manager", EntryManager);
-customElements.define("entry-node", EntryNode);
-customElements.define("entry-tree", EntryTree);
-customElements.define("file-editor", FileEditor);
-customElements.define("janilla-ide", JanillaIde);
+export default class EntryItem extends FlexibleElement {
 
-const initState = () => {
-	const el = document.getElementById("state");
-	const s = el ? JSON.parse(el.text) : {};
-	history.replaceState(s, "");
-	dispatchEvent(new CustomEvent("popstate"));
+	static get observedAttributes() {
+		return ["slot"];
+	}
+
+	static get templateName() {
+		return "entry-item";
+	}
+
+	get state() {
+		let i = 0;
+		for (let el = this.parentElement.firstElementChild; el !== this; el = el.nextElementSibling)
+			i++;
+		return this.closest("entry-list").state.contents[i];
+	}
+
+	constructor() {
+		super();
+	}
 }
-
-if (document.readyState === "loading")
-	document.addEventListener("DOMContentLoaded", initState);
-else
-	initState();

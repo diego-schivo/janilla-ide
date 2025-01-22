@@ -21,30 +21,47 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import EntryItem from "./entry-item.js";
-import EntryList from "./entry-list.js";
-import EntryManager from "./entry-manager.js";
-import EntryNode from "./entry-node.js";
-import EntryTree from "./entry-tree.js";
-import FileEditor from "./file-editor.js";
-import JanillaIde from "./janilla-ide.js";
+import { FlexibleElement } from "./flexible-element.js";
 
-customElements.define("entry-item", EntryItem);
-customElements.define("entry-list", EntryList);
-customElements.define("entry-manager", EntryManager);
-customElements.define("entry-node", EntryNode);
-customElements.define("entry-tree", EntryTree);
-customElements.define("file-editor", FileEditor);
-customElements.define("janilla-ide", JanillaIde);
+export default class EntryList extends FlexibleElement {
 
-const initState = () => {
-	const el = document.getElementById("state");
-	const s = el ? JSON.parse(el.text) : {};
-	history.replaceState(s, "");
-	dispatchEvent(new CustomEvent("popstate"));
+	static get observedAttributes() {
+		return ["data-path"];
+	}
+
+	static get templateName() {
+		return "entry-list";
+	}
+
+	get state() {
+		return this.closest("janilla-ide").state.entryList;
+	}
+
+	constructor() {
+		super();
+		this.attachShadow({ mode: "open" });
+	}
+
+	async updateDisplay() {
+		// console.log("EntryList.updateDisplay");
+		const s = this.state;
+		const p = this.closest("janilla-ide").state.path;
+		this.shadowRoot.appendChild(this.interpolateDom({
+			$template: "shadow",
+			items: s.items.map(x => ({
+				$template: "shadow-item",
+				...x,
+				class: x.path === p ? "active" : null,
+				name: x.path.split("/").at(-1)
+			}))
+		}));
+		this.appendChild(this.interpolateDom({
+			$template: "",
+			items: s.items.map((x, i) => ({
+				$template: "item",
+				...x,
+				slot: x.path === p ? "content" : null
+			}))
+		}));
+	}
 }
-
-if (document.readyState === "loading")
-	document.addEventListener("DOMContentLoaded", initState);
-else
-	initState();

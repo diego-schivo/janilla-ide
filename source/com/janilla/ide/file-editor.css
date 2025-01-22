@@ -1,21 +1,2 @@
 file-editor {
-  form {
-    box-sizing: border-box;
-    height: 100%;
-    width: 100%;
-  }
-
-  textarea {
-    background: inherit;
-    box-sizing: border-box;
-    color: inherit;
-    font-size: 1rem;
-    height: 100%;
-    margin: 0;
-    overflow-wrap: normal;
-    overflow-x: scroll;
-	resize: none;
-	white-space: pre;
-    width: 100%;
-  }
 }

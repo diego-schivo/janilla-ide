@@ -28,7 +28,9 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.janilla.web.Handle;
 
@@ -37,22 +39,25 @@ public class EntryApi {
 	private Path directory = Path.of(System.getProperty("user.home")).resolve("gittmp");
 
 	@Handle(method = "GET", path = "/api/entries/(.*)")
-	public List<Entry> list(String path) throws IOException {
+	public List<Entry> list(Path path) throws IOException {
 		System.out.println("EntryApi.list, path=" + path);
-		return list(directory.resolve(path));
+		return list(directory.resolve(path), true);
 	}
 
-	public static List<Entry> list(Path directory) {
+	public static List<Entry> list(Path directory, boolean children) {
 		try (var pp = Files.list(directory)) {
 			return pp.map(x -> {
-				var ne = Files.isDirectory(x);
-				if (ne)
+				var d = Files.isDirectory(x);
+				var ex = d;
+				if (ex)
 					try (var pp2 = Files.list(x)) {
-						ne = pp2.findAny().isPresent();
+						ex = pp2.findAny().isPresent();
 					} catch (IOException e) {
 						throw new UncheckedIOException(e);
 					}
-				return new Entry(x.getFileName().toString(), ne);
+				var m = children && Files.isDirectory(x) ? list(x, false).stream()
+						.collect(Collectors.toMap(Entry::name, y -> y, (y, _) -> y, LinkedHashMap::new)) : null;
+				return new Entry(x.getFileName().toString(), m);
 			}).sorted(Comparator.comparing(Entry::name)).toList();
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

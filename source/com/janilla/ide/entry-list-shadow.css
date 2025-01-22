@@ -1,3 +1,6 @@
+@charset "UTF-8";
+@import "base.css";
+
 :host {
   display: flex;
   flex-direction: column;
@@ -9,8 +12,10 @@ header {
     display: flex;
     flex-direction: row;
     gap: 1rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  }
+
+  .active {
+    background: gray;
+    color: black;
   }
 }

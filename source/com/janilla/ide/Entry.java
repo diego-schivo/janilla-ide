@@ -23,5 +23,7 @@
  */
 package com.janilla.ide;
 
-public record Entry(String name, boolean expandable) {
+import java.util.Map;
+
+public record Entry(String name, Map<String, Entry> children) {
 }

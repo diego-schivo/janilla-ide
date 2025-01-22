@@ -21,30 +21,49 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import EntryItem from "./entry-item.js";
-import EntryList from "./entry-list.js";
-import EntryManager from "./entry-manager.js";
-import EntryNode from "./entry-node.js";
-import EntryTree from "./entry-tree.js";
-import FileEditor from "./file-editor.js";
-import JanillaIde from "./janilla-ide.js";
+import { FlexibleElement } from "./flexible-element.js";
 
-customElements.define("entry-item", EntryItem);
-customElements.define("entry-list", EntryList);
-customElements.define("entry-manager", EntryManager);
-customElements.define("entry-node", EntryNode);
-customElements.define("entry-tree", EntryTree);
-customElements.define("file-editor", FileEditor);
-customElements.define("janilla-ide", JanillaIde);
+export default class EntryNode extends FlexibleElement {
 
-const initState = () => {
-	const el = document.getElementById("state");
-	const s = el ? JSON.parse(el.text) : {};
-	history.replaceState(s, "");
-	dispatchEvent(new CustomEvent("popstate"));
+	static get observedAttributes() {
+		return ["data-path", "data-directory", "data-expandable", "data-expanded"];
+	}
+
+	static get templateName() {
+		return "entry-node";
+	}
+
+	get state() {
+		let s = this.closest("entry-tree").state;
+		let nn = s.nodes;
+		for (const x of this.dataset.path.split("/")) {
+			s = nn[x];
+			nn = s.children;
+		}
+		return s;
+	}
+
+	constructor() {
+		super();
+	}
+
+	async updateDisplay() {
+		// console.log("EntryNode.updateDisplay");
+		const s = this.state;
+		const ap = this.closest("entry-tree").dataset.path;
+		this.appendChild(this.interpolateDom({
+			$template: "",
+			...s,
+			name: s.path.split("/").at(-1),
+			content: s.children ? {
+				$template: "content",
+				items: Object.values(s.children).map(x => ({
+					$template: "item",
+					...x,
+					expanded: !!x.children,
+					active: x.path === ap
+				}))
+			} : null
+		}));
+	}
 }
-
-if (document.readyState === "loading")
-	document.addEventListener("DOMContentLoaded", initState);
-else
-	initState();

@@ -35,7 +35,6 @@ export default class JanillaIde extends FlexibleElement {
 
 	connectedCallback() {
 		// console.log("JanillaIde.connectedCallback");
-		// super.connectedCallback();
 		addEventListener("popstate", this.handlePopState);
 		this.addEventListener("click", this.handleClick);
 	}
@@ -48,12 +47,19 @@ export default class JanillaIde extends FlexibleElement {
 
 	handleClick = async event => {
 		// console.log("JanillaIde.handleClick", event);
-		if (event.target.tagName.toLowerCase() === "a") {
+		const a = event.composedPath().find(x => x.tagName?.toLowerCase() === "a");
+		if (a?.href) {
 			event.preventDefault();
-			const p = event.target.getAttribute("href");
-			this.state.entryTree.path = p;
-			this.state.fileEditor = { path: p };
-			history.pushState(this.state, "", `/edit/${p}`);
+			const p = a.getAttribute("href").replace(/^\/entry\//, "");
+			this.state.path = p;
+			const cc = this.state.entryList.contents;
+			if (!cc.find(x => x.path === p))
+				cc.push({ path: p });
+			history.pushState(this.state, "", `/entry/${p}`);
+			this.requestUpdate();
+		} else if (event.target.closest("entry-tree")) {
+			this.state.path = null;
+			history.pushState(this.state, "", "/");
 			this.requestUpdate();
 		}
 	}
