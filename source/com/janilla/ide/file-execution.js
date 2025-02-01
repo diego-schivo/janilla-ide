@@ -23,64 +23,60 @@
  */
 import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class FileExecution extends UpdatableHTMLElement {
 
 	static get templateName() {
-		return "entry-list";
+		return "file-execution";
 	}
 
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
 	}
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.shadowRoot.addEventListener("click", this.handleClick);
+		this.addEventListener("submit", this.handleSubmit);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		this.shadowRoot.removeEventListener("click", this.handleClick);
+		this.removeEventListener("submit", this.handleSubmit);
 	}
 
-	handleClick = event => {
-		const li = event.target.closest("li");
-		if (li?.closest("ul") !== this.shadowRoot.querySelector("ul"))
-			return;
-		const a = li.querySelector("a");
-		const p = new URL(a.href).pathname.substring("/entry/".length);
-		if (event.target.closest("a")) {
-			event.preventDefault();
-			this.dispatchEvent(new CustomEvent("select-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
-		} else
-			this.dispatchEvent(new CustomEvent("close-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
+	handleSubmit = async event => {
+		event.preventDefault();
+		const p = this.closest("editor-list").dataset.path;
+		switch (event.submitter.name) {
+			case "run":
+				this.state.output = "";
+				await (await fetch(`/api/executions/${p}`, { method: "POST" })).json();
+				const es = new EventSource(`/api/executions/${p}`);
+				es.onopen = () => {
+					//console.log("Connection to server opened.");
+				};
+				es.onmessage = async e => {
+					//console.log(e.data);
+					if (e.data === "ok") {
+						es.close();
+						return;
+					}
+					this.state.output += e.data + "\n";
+					this.requestUpdate();
+				};
+				es.onerror = () => {
+					//console.log("EventSource failed.");
+				};
+				break;
+			case "terminate":
+				await (await fetch(`/api/executions/${p}`, { method: "DELETE" })).json();
+				break;
+		}
 	}
 
 	async updateDisplay() {
-		const s = this.closest("root-layout").state;
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
-			items: s.paths.map((x, i) => ({
-				$template: "shadow-item",
-				path: x,
-				name: x ? x.split("/").at(-1) : "-",
-				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			articles: s.paths.map((x, i) => ({
-				$template: "article",
-				slot: i === s.activeIndex ? "content" : null,
-				path: x
-			}))
+			...this.state
 		}));
 	}
 }

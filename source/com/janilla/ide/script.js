@@ -21,30 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import EntryItem from "./entry-item.js";
+import DirectoryContent from "./directory-content.js";
+import EditorList from "./editor-list.js";
 import EntryList from "./entry-list.js";
-import EntryManager from "./entry-manager.js";
-import EntryNode from "./entry-node.js";
 import EntryTree from "./entry-tree.js";
-import FileEditor from "./file-editor.js";
-import JanillaIde from "./janilla-ide.js";
+import FileContent from "./file-content.js";
+import FileExecution from "./file-execution.js";
+import OutputArea from "./output-area.js";
+import RootLayout from "./root-layout.js";
 
-customElements.define("entry-item", EntryItem);
+customElements.define("directory-content", DirectoryContent);
+customElements.define("editor-list", EditorList);
 customElements.define("entry-list", EntryList);
-customElements.define("entry-manager", EntryManager);
-customElements.define("entry-node", EntryNode);
 customElements.define("entry-tree", EntryTree);
-customElements.define("file-editor", FileEditor);
-customElements.define("janilla-ide", JanillaIde);
-
-const initState = () => {
-	const el = document.getElementById("state");
-	const s = el ? JSON.parse(el.text) : {};
-	history.replaceState(s, "");
-	dispatchEvent(new CustomEvent("popstate"));
-}
-
-if (document.readyState === "loading")
-	document.addEventListener("DOMContentLoaded", initState);
-else
-	initState();
+customElements.define("file-content", FileContent);
+customElements.define("file-execution", FileExecution);
+customElements.define("output-area", OutputArea);
+customElements.define("root-layout", RootLayout);

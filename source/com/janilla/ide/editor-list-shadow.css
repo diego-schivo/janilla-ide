@@ -6,12 +6,6 @@ ul {
   gap: 1rem;
 }
 
-li {
-  &::after {
-    content: "\2715";
-  }
-}
-
-.active {
+li.active {
   color: lightgray;
 }

@@ -1,0 +1,73 @@
+<form autocomplete="off">
+  <fieldset>
+    <legend>Entries</legend>
+    <ul>
+      <!--${entryItems}-->
+    </ul>
+  </fieldset>
+  <button name="action" value="delete">Delete</button>
+</form>
+<form autocomplete="off">
+  <!--
+  <fieldset>
+    <legend>Type</legend>
+    <ul>
+      <li>
+        <label>
+          <input type="radio" name="$type" value="Directory" required />
+          Directory
+        </label>
+      </li>
+      <li>
+        <label>
+          <input type="radio" name="$type" value="File" required />
+          File
+        </label>
+      </li>
+    </ul>
+  </fieldset>
+  -->
+  <label>
+    Path:
+    <input name="path" required />
+  </label>
+  <button name="action" value="create">Create</button>
+</form>
+<!--${importForm}-->
+<!--${branchForm}-->
+
+<template id="entry-item">
+  <li>
+    <label>
+      <input type="checkbox" name="names" value="${name}" />
+      ${name}
+    </label>
+  </li>
+</template>
+
+<template id="import-form">
+  <form autocomplete="off">
+    <label>
+      URL:
+      <input name="url" required />
+    </label>
+    <button name="action" value="clone">Clone</button>
+  </form>
+</template>
+
+<template id="branch-form">
+  <form autocomplete="off">
+    <label>
+      Branch:
+      <input name="branch" value="${branch}" list="branches" required />
+      <datalist id="branches">
+        <!--${options}-->
+      </datalist>
+    </label>
+    <button name="action" value="switch">Switch</button>
+  </form>
+</template>
+
+<template id="branch-option">
+  <option value="${value}"></option>
+</template>

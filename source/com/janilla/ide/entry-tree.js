@@ -21,28 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { FlexibleElement } from "./flexible-element.js";
+import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryTree extends FlexibleElement {
-
-	static get observedAttributes() {
-		return ["data-path"];
-	}
+export default class EntryTree extends UpdatableHTMLElement {
 
 	static get templateName() {
 		return "entry-tree";
-	}
-
-	get state() {
-		return this.closest("janilla-ide").state.entryTree;
-	}
-
-	set state(x) {
-		const ji = this.closest("janilla-ide");
-		if (x != null && !ji.state)
-			ji.state = {};
-		if (x != null || ji.state)
-			ji.state.entryTree = x;
 	}
 
 	constructor() {
@@ -50,75 +34,62 @@ export default class EntryTree extends FlexibleElement {
 	}
 
 	connectedCallback() {
-		// console.log("EntryTree.connectedCallback");
 		super.connectedCallback();
 		this.addEventListener("click", this.handleClick);
 	}
 
 	disconnectedCallback() {
-		// console.log("EntryTree.disconnectedCallback");
+		super.disconnectedCallback();
 		this.removeEventListener("click", this.handleClick);
 	}
 
 	handleClick = async event => {
-		// console.log("EntryTree.handleClick", event);
-		if (event.target.tagName.toLowerCase() === "li") {
-			event.stopPropagation();
-			const en = event.target.querySelector("entry-node");
-			const p = en.dataset.path;
-			let s = this.state;
-			let nn = s.nodes;
-			for (const x of p.split("/")) {
-				s = nn[x];
-				nn = s.children;
-			}
-			if (en.dataset.expanded == null) {
-				const j = await (await fetch(`/api/entries/${p}`)).json();
-				s.children = Object.fromEntries(j.map(x => ([x.name, {
-					path: [p, x.name].join("/"),
-					...x
-				}])));
-			} else
-				delete s.children;
-			history.pushState(this.closest("janilla-ide").state, "", "/");
-			en.parentElement.closest("entry-tree, entry-node").requestUpdate();
-		/*
-		} else {
-			const en = event.target.closest("entry-node");
-			const p = en.dataset.path;
-			let s = this.state;
-			p.split("/").forEach((x, i, xx) => {
-				if (i < xx.length - 1)
-					s = s.children[x];
-				else
-					Object.entries(s.children).forEach(([k, v]) => v.active = k === x);
-			});
-			en.parentElement.closest("entry-tree, entry-node").requestUpdate();
-		*/
+		const li = event.target.closest("li");
+		if (!li) {
+			this.dispatchEvent(new CustomEvent("select-entry", {
+				bubbles: true,
+				detail: { path: null }
+			}));
+			return;
+		}
+		const a = li.querySelector("a");
+		const p = new URL(a.href).pathname.substring("/entry/".length);
+		if (event.target.closest("a")) {
+			event.preventDefault();
+			this.dispatchEvent(new CustomEvent("select-entry", {
+				bubbles: true,
+				detail: { path: p }
+			}));
+		} else if (a.classList.contains("directory")) {
+			const t = a.classList.contains("expanded") ? "collapse-directory" : "expand-directory";
+			this.dispatchEvent(new CustomEvent(t, {
+				bubbles: true,
+				detail: { path: p }
+			}));
 		}
 	}
 
 	async updateDisplay() {
-		// console.log("EntryTree.updateDisplay");
-		if (!this.state) {
-			const j = await (await fetch("/api/entries/")).json();
-			this.state = {
-				nodes: Object.fromEntries(j.map(x => ([x.name, {
-					path: x.name,
-					expandable: x.expandable
-				}])))
-			};
-			history.pushState(this.closest("janilla-ide").state, "", "/");
-		}
-		const p = this.closest("janilla-ide").state.path;
+		const s = this.closest("root-layout").state;
+		const p = s.activeIndex !== -1 ? s.paths[s.activeIndex] : null;
+		const c = (entries, path) => entries ? {
+			$template: "list",
+			items: entries.map(x => {
+				const p2 = path ? `${path}/${x.name}` : x.name;
+				return {
+					$template: "item",
+					path: p2,
+					directory: Object.hasOwn(x, "entries") ? "directory" : null,
+					expanded: x.entries ? "expanded" : null,
+					active: p2 === p ? "active" : null,
+					...x,
+					content: c(x.entries, p2)
+				};
+			})
+		} : null;
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			items: Object.values(this.state.nodes).map(x => ({
-				$template: "item",
-				...x,
-				expanded: !!x.children,
-				active: x.name === p
-			}))
+			content: c(s.entries)
 		}));
 	}
 }

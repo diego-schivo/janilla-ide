@@ -23,7 +23,5 @@
  */
 package com.janilla.ide;
 
-public sealed interface Entry permits Directory, File {
-
-	String name();
+public record Execution(String output) {
 }

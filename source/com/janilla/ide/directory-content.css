@@ -1,0 +1,22 @@
+directory-content {
+  &,
+  form,
+  label {
+    display: flex;
+    gap: 1rem;
+  }
+
+  &,
+  form {
+    flex-direction: column;
+  }
+
+  &,
+  input:not([type]) {
+    flex: 1;
+  }
+
+  button {
+    align-self: start;
+  }
+}

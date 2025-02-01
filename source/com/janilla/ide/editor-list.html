@@ -1,0 +1,33 @@
+<template id="shadow">
+  <link rel="stylesheet" href="/editor-list-shadow.css" />
+  <slot name="content"></slot>
+  <ul>
+    <!--${items}-->
+  </ul>
+</template>
+
+<template id="shadow-item">
+  <li class="${active}">
+    <a href="#">${name}</a>
+  </li>
+</template>
+
+<!--${articles}-->
+
+<template id="article-directory-content">
+  <article slot="${slot}">
+    <directory-content></directory-content>
+  </article>
+</template>
+
+<template id="article-file-content">
+  <article slot="${slot}">
+    <file-content></file-content>
+  </article>
+</template>
+
+<template id="article-file-execution">
+  <article slot="${slot}">
+    <file-execution></file-execution>
+  </article>
+</template>

@@ -23,64 +23,67 @@
  */
 import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class DirectoryContent extends UpdatableHTMLElement {
 
 	static get templateName() {
-		return "entry-list";
+		return "directory-content";
 	}
 
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
 	}
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.shadowRoot.addEventListener("click", this.handleClick);
+		this.addEventListener("submit", this.handleSubmit);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		this.shadowRoot.removeEventListener("click", this.handleClick);
+		this.removeEventListener("submit", this.handleSubmit);
 	}
 
-	handleClick = event => {
-		const li = event.target.closest("li");
-		if (li?.closest("ul") !== this.shadowRoot.querySelector("ul"))
-			return;
-		const a = li.querySelector("a");
-		const p = new URL(a.href).pathname.substring("/entry/".length);
-		if (event.target.closest("a")) {
-			event.preventDefault();
-			this.dispatchEvent(new CustomEvent("select-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
-		} else
-			this.dispatchEvent(new CustomEvent("close-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
+	handleSubmit = async event => {
+		event.preventDefault();
+		const fd = new FormData(event.target);
+		const o = [...fd.entries()].reduce((x, y) => {
+			switch (y[0]) {
+				case "names":
+					(x.names ??= []).push(y[1]);
+					break;
+				default:
+					x[y[0]] = y[1];
+					break;
+			}
+			return x;
+		}, { $type: "Directory" });
+		if (event.submitter.value)
+			o[event.submitter.name] = event.submitter.value;
+		const p = this.closest("editor-list").dataset.path ?? null;
+		await (await fetch(`/api/entries/${p ?? ""}`, {
+			method: event.submitter.name === "create" ? "POST" : "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(o)
+		})).json();
 	}
 
 	async updateDisplay() {
-		const s = this.closest("root-layout").state;
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
-			items: s.paths.map((x, i) => ({
-				$template: "shadow-item",
-				path: x,
-				name: x ? x.split("/").at(-1) : "-",
-				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
+		const s = this.closest("editor-list").state;
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			articles: s.paths.map((x, i) => ({
-				$template: "article",
-				slot: i === s.activeIndex ? "content" : null,
-				path: x
-			}))
+			entryItems: s.entry.entries.map(x => ({
+				$template: "entry-item",
+				...x
+			})),
+			importForm: !s.path ? { $template: "import-form" } : null,
+			branchForm: s.entry.repository ? {
+				$template: "branch-form",
+				...s.entry.repository,
+				options: s.entry.repository.branches.map(x => ({
+					$template: "branch-option",
+					value: x
+				}))
+			} : null
 		}));
 	}
 }

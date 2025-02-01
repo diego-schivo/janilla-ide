@@ -1,0 +1,7 @@
+output-area {
+  &,
+  textarea {
+    display: flex;
+    flex: 1;
+  }
+}

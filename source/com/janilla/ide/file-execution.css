@@ -1,0 +1,18 @@
+file-execution {
+  &,
+  form,
+  div,
+  label,
+  textarea {
+    display: flex;
+    gap: 1rem;
+  }
+
+  &,
+  form,
+  label,
+  textarea {
+    flex: 1;
+	flex-direction: column;
+  }
+}

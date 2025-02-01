@@ -1,4 +1,4 @@
-entry-list {
+editor-list {
   &,
   & > article {
     display: flex;
@@ -6,5 +6,9 @@ entry-list {
     flex-direction: column;
     gap: 1rem;
     min-height: 0;
+  }
+
+  & > article {
+    overflow: auto;
   }
 }

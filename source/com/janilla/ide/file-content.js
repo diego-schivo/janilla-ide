@@ -23,64 +23,53 @@
  */
 import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class FileContent extends UpdatableHTMLElement {
 
 	static get templateName() {
-		return "entry-list";
+		return "file-content";
 	}
 
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
 	}
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.shadowRoot.addEventListener("click", this.handleClick);
+		this.addEventListener("submit", this.handleSubmit);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		this.shadowRoot.removeEventListener("click", this.handleClick);
+		this.removeEventListener("submit", this.handleSubmit);
 	}
 
-	handleClick = event => {
-		const li = event.target.closest("li");
-		if (li?.closest("ul") !== this.shadowRoot.querySelector("ul"))
-			return;
-		const a = li.querySelector("a");
-		const p = new URL(a.href).pathname.substring("/entry/".length);
-		if (event.target.closest("a")) {
-			event.preventDefault();
-			this.dispatchEvent(new CustomEvent("select-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
-		} else
-			this.dispatchEvent(new CustomEvent("close-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
+	handleSubmit = async event => {
+		event.preventDefault();
+		const fd = new FormData(event.target);
+		const o = [...fd.entries()].reduce((x, y) => {
+			x[y[0]] = y[1];
+			return x;
+		}, { $type: "File" });
+		if (event.submitter.value)
+			o[event.submitter.name] = event.submitter.value;
+		const p = this.closest("editor-list").dataset.path ?? null;
+		var j = await (await fetch(`/api/entries/${p}`, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(o)
+		})).json();
+		if (j) {
+			const s = this.closest("editor-list").state;
+			s.entry = j;
+			this.requestUpdate();
+		}
 	}
 
 	async updateDisplay() {
-		const s = this.closest("root-layout").state;
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
-			items: s.paths.map((x, i) => ({
-				$template: "shadow-item",
-				path: x,
-				name: x ? x.split("/").at(-1) : "-",
-				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
+		const s = this.closest("editor-list").state;
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			articles: s.paths.map((x, i) => ({
-				$template: "article",
-				slot: i === s.activeIndex ? "content" : null,
-				path: x
-			}))
+			...s.entry
 		}));
 	}
 }

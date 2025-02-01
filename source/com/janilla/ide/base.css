@@ -1,3 +1,7 @@
+:root {
+  scrollbar-color: darkgray black;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -5,8 +9,8 @@ a {
 
 body {
   background: black;
-  box-sizing: border-box;
   color: gray;
+  display: flex;
   height: 100vh;
   margin: 0;
 }
@@ -28,7 +32,7 @@ textarea {
 textarea {
   margin: 0;
   overflow-wrap: normal;
-  overflow-x: scroll;
+  overflow-x: auto;
   resize: none;
   white-space: pre;
 }

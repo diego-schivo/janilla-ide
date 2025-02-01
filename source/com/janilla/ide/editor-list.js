@@ -23,10 +23,14 @@
  */
 import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class EditorList extends UpdatableHTMLElement {
+
+	static get observedAttributes() {
+		return ["data-path"];
+	}
 
 	static get templateName() {
-		return "entry-list";
+		return "editor-list";
 	}
 
 	constructor() {
@@ -36,50 +40,49 @@ export default class EntryList extends UpdatableHTMLElement {
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.shadowRoot.addEventListener("click", this.handleClick);
+		this.state.activeIndex = 0;
+		this.addEventListener("click", this.handleClick);
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		this.shadowRoot.removeEventListener("click", this.handleClick);
+		this.removeEventListener("click", this.handleClick);
 	}
 
 	handleClick = event => {
-		const li = event.target.closest("li");
-		if (li?.closest("ul") !== this.shadowRoot.querySelector("ul"))
+		const a = event.composedPath().find(x => x.tagName?.toLowerCase() === "a");
+		const ul = this.shadowRoot.querySelector("ul");
+		if (a?.closest("ul") !== ul)
 			return;
-		const a = li.querySelector("a");
-		const p = new URL(a.href).pathname.substring("/entry/".length);
-		if (event.target.closest("a")) {
-			event.preventDefault();
-			this.dispatchEvent(new CustomEvent("select-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
-		} else
-			this.dispatchEvent(new CustomEvent("close-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
+		event.preventDefault();
+		event.stopPropagation();
+		this.state.activeIndex = Array.prototype.indexOf.call(ul.children, a.closest("li"));
+		this.requestUpdate();
 	}
 
 	async updateDisplay() {
-		const s = this.closest("root-layout").state;
+		const p = this.dataset.path ?? null;
+		const s = this.state;
+		if (p !== s.path) {
+			this.shadowRoot.appendChild(this.interpolateDom({ $template: "shadow" }));
+			this.appendChild(this.interpolateDom({ $template: "" }));
+			s.path = p;
+			s.entry = await (await fetch(`/api/entries/${p ?? ""}`)).json();
+		}
+		const nn = s.entry.entries ? ["directory-content"] : ["file-content", "file-execution"];
 		this.shadowRoot.appendChild(this.interpolateDom({
 			$template: "shadow",
-			items: s.paths.map((x, i) => ({
+			items: nn.map((x, i) => ({
 				$template: "shadow-item",
-				path: x,
-				name: x ? x.split("/").at(-1) : "-",
+				name: x,
 				active: i === s.activeIndex ? "active" : null
 			}))
 		}));
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			articles: s.paths.map((x, i) => ({
-				$template: "article",
-				slot: i === s.activeIndex ? "content" : null,
-				path: x
+			articles: nn.map((x, i) => ({
+				$template: `article-${x}`,
+				slot: i === s.activeIndex ? "content" : null
 			}))
 		}));
 	}

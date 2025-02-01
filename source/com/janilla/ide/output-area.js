@@ -23,64 +23,55 @@
  */
 import { UpdatableHTMLElement } from "./updatable-html-element.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class OutputArea extends UpdatableHTMLElement {
 
 	static get templateName() {
-		return "entry-list";
+		return "output-area";
 	}
 
 	constructor() {
 		super();
-		this.attachShadow({ mode: "open" });
 	}
 
 	connectedCallback() {
 		super.connectedCallback();
-		this.shadowRoot.addEventListener("click", this.handleClick);
+		this.eventSource = new EventSource("/api/output");
+		this.eventSource.onopen = () => {
+			//console.log("Connection to server opened.");
+		};
+		this.eventSource.onmessage = async e => {
+			//console.log(e.data);
+			this.querySelector("textarea").value += e.data + "\n";
+		};
+		this.eventSource.onerror = () => {
+			//console.log("EventSource failed.");
+			this.eventSource.close();
+		};
+		/*
+		this.eventSource.addEventListener("ping", e => {
+		  const o = JSON.parse(e.data);
+		  console.log("ping at " + o.time);
+		});
+		*/
+		this.eventSource.addEventListener("refresh-directory", e => {
+			const o = JSON.parse(e.data);
+			//console.log("refresh-directory", o);
+			this.dispatchEvent(new CustomEvent("expand-directory", {
+				bubbles: true,
+				detail: { path: o ? o.path : null }
+			}));
+		});
 	}
 
 	disconnectedCallback() {
 		super.disconnectedCallback();
-		this.shadowRoot.removeEventListener("click", this.handleClick);
-	}
-
-	handleClick = event => {
-		const li = event.target.closest("li");
-		if (li?.closest("ul") !== this.shadowRoot.querySelector("ul"))
-			return;
-		const a = li.querySelector("a");
-		const p = new URL(a.href).pathname.substring("/entry/".length);
-		if (event.target.closest("a")) {
-			event.preventDefault();
-			this.dispatchEvent(new CustomEvent("select-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
-		} else
-			this.dispatchEvent(new CustomEvent("close-entry", {
-				bubbles: true,
-				detail: { path: p }
-			}));
+		this.eventSource.close();
 	}
 
 	async updateDisplay() {
-		const s = this.closest("root-layout").state;
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
-			items: s.paths.map((x, i) => ({
-				$template: "shadow-item",
-				path: x,
-				name: x ? x.split("/").at(-1) : "-",
-				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
 		this.appendChild(this.interpolateDom({
 			$template: "",
-			articles: s.paths.map((x, i) => ({
-				$template: "article",
-				slot: i === s.activeIndex ? "content" : null,
-				path: x
-			}))
+			//...this.state
 		}));
 	}
 }

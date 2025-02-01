@@ -1,16 +1,21 @@
 entry-tree {
-  flex: 1 1 0;
   overflow: auto;
 
   ul {
     padding-left: 1rem;
   }
 
-  li:has([data-expandable])::marker {
-    content: "\2bc8  ";
+  li {
+    &:has(.directory)::marker {
+      content: "\23f5  ";
+    }
+
+    &:has(.expanded)::marker {
+      content: "\23f7  ";
+    }
   }
 
-  li:has([data-expanded])::marker {
-    content: "\2bc6  ";
+  .active {
+    color: lightgray;
   }
 }

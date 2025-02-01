@@ -1,13 +1,14 @@
-<ul>
-  <!--${items}-->
-</ul>
+<!--${content}-->
+
+<template id="list">
+  <ul>
+    <!--${items}-->
+  </ul>
+</template>
+
 <template id="item">
   <li>
-    <entry-node
-    	data-name="${name}"
-    	data-expandable="${expandable}"
-    	data-expanded="${expanded}"
-    	data-active="${active}">
-    </entry-node>
+    <a href="/entry/${path}" class="${directory} ${expanded} ${active}">${name}</a>
+    <!--${content}-->
   </li>
 </template>

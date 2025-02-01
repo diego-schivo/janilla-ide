@@ -26,9 +26,10 @@ package com.janilla.ide;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
-public class JavaIndent implements Indent {
+public class JavaIndent implements UnaryOperator<String> {
 
 	private static final String SPACES = "    ";
 

@@ -23,7 +23,7 @@
  */
 package com.janilla.ide;
 
-public sealed interface Entry permits Directory, File {
+import java.util.List;
 
-	String name();
+public record Repository(String branch, List<String> branches) {
 }

@@ -24,14 +24,14 @@
 package com.janilla.ide;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 
@@ -39,8 +39,6 @@ import com.janilla.http.HttpHandler;
 import com.janilla.http.HttpProtocol;
 import com.janilla.net.Net;
 import com.janilla.net.Server;
-import com.janilla.persistence.ApplicationPersistenceBuilder;
-import com.janilla.persistence.Persistence;
 import com.janilla.reflect.Factory;
 import com.janilla.util.Util;
 import com.janilla.web.ApplicationHandlerBuilder;
@@ -85,46 +83,68 @@ public class JanillaIde {
 
 	public Factory factory;
 
-	public HttpHandler handler;
+//	public Persistence persistence;
 
-	public Persistence persistence;
+	public HttpHandler handler;
 
 	public JanillaIde(Properties configuration) {
 		this.configuration = configuration;
 		factory = new Factory();
 		factory.setTypes(Util.getPackageClasses(getClass().getPackageName()).toList());
 		factory.setSource(this);
-		{
-			var p = configuration.getProperty("janilla-ide.database.file");
-			if (p.startsWith("~"))
-				p = System.getProperty("user.home") + p.substring(1);
-			var pb = factory.create(ApplicationPersistenceBuilder.class, Map.of("databaseFile", Path.of(p)));
-			persistence = pb.build();
-		}
+//		{
+//			var p = configuration.getProperty("janilla-ide.database.file");
+//			if (p.startsWith("~"))
+//				p = System.getProperty("user.home") + p.substring(1);
+//			var pb = factory.create(ApplicationPersistenceBuilder.class, Map.of("databaseFile", Path.of(p)));
+//			persistence = pb.build();
+//		}
 		handler = factory.create(ApplicationHandlerBuilder.class).build();
+		try {
+			var ps = configuration.getProperty("janilla-ide.workspace.directory");
+			if (ps.startsWith("~"))
+				ps = System.getProperty("user.home") + ps.substring(1);
+			var d = Path.of(ps);
+			if (!Files.exists(d))
+				Files.createDirectories(d);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 	public JanillaIde application() {
 		return this;
 	}
 
-	private Path directory = Path.of(System.getProperty("user.home")).resolve("gittmp");
-
 	@Handle(method = "GET", path = "/|/entry/(.+)")
 	public Index index(Path path) throws IOException {
-		return new Index(new State(path, new EntryTree(visit(directory, path)),
-				new EntryList(List.of(new EntryItem(path, 0, List.of(new EntryManager(), new FileEditor()))))));
+		return new Index(new State(visit(workspaceDirectory(), path), path != null ? List.of(path) : List.of(),
+				path != null ? 0 : -1));
 	}
 
-	protected Map<String, EntryNode> visit(Path directory, Path path) {
-		var ee = EntryApi.list(directory, true);
-		var p0 = path != null && path.getNameCount() > 0 ? path.getName(0) : null;
-		return ee.stream().map(x -> {
-			var e1 = x.children() != null && !x.children().isEmpty();
-			var e2 = e1 && p0 != null && x.name().equals(p0.getFileName().toString());
-			return new EntryNode(x.name(), e1, e2,
-					e2 && p0 != null ? visit(directory.resolve(x.name()), p0.relativize(path)) : null);
-		}).collect(Collectors.toMap(x -> x.name(), x -> x, (x, _) -> x, LinkedHashMap::new));
+	protected List<Entry> visit(Path directory, Path path) throws IOException {
+		try (var ee = Files.list(directory)) {
+			return ee.filter(x -> !x.getFileName().toString().startsWith(".")).map(x -> {
+				try {
+					var n = x.getFileName();
+					Entry e = Files.isDirectory(x) ? new Directory(n.toString(),
+							path != null && path.startsWith(n) ? visit(directory.resolve(n), n.relativize(path)) : null,
+							null) : new File(n.toString(), null);
+					return e;
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			}).sorted(Comparator.comparing(x -> ((Entry) x).name().toLowerCase())).toList();
+		} catch (UncheckedIOException e) {
+			throw e.getCause();
+		}
+	}
+
+	protected Path workspaceDirectory() {
+		var ps = configuration.getProperty("janilla-ide.workspace.directory");
+		if (ps.startsWith("~"))
+			ps = System.getProperty("user.home") + ps.substring(1);
+		return Path.of(ps);
 	}
 
 	@Render(template = "index.html")
@@ -132,27 +152,6 @@ public class JanillaIde {
 	}
 
 	@Render(renderer = JsonRenderer.class)
-	public record State(Path path, EntryTree entryTree, EntryList entryList) {
-	}
-
-	public record EntryTree(Map<String, EntryNode> nodes) {
-	}
-
-	public record EntryNode(String name, boolean expandable, boolean expanded, Map<String, EntryNode> children) {
-	}
-
-	public record EntryList(List<EntryItem> items) {
-	}
-
-	public record EntryItem(Path path, int view, List<EntryView> views) {
-	}
-
-	public interface EntryView {
-	}
-
-	public record EntryManager() implements EntryView {
-	}
-
-	public record FileEditor() implements EntryView {
+	public record State(List<Entry> entries, List<Path> paths, int activeIndex) {
 	}
 }
