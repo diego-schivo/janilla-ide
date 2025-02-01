@@ -24,7 +24,6 @@
 package com.janilla.ide;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+
+import javax.net.ssl.SSLContext;
 
 import com.janilla.http.HttpHandler;
 import com.janilla.http.HttpProtocol;
@@ -60,20 +61,20 @@ public class JanillaIde {
 						p = System.getProperty("user.home") + p.substring(1);
 					pp.load(Files.newInputStream(Path.of(p)));
 				}
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
 			}
-			var a = new JanillaIde(pp);
-			var hp = a.factory.create(HttpProtocol.class);
-			try (var is = Net.class.getResourceAsStream("testkeys")) {
-				hp.setSslContext(Net.getSSLContext("JKS", is, "passphrase".toCharArray()));
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
+			var ji = new JanillaIde(pp);
+			Server s;
+			{
+				var a = new InetSocketAddress(
+						Integer.parseInt(ji.configuration.getProperty("janilla-ide.server.port")));
+				SSLContext sc;
+				try (var is = Net.class.getResourceAsStream("testkeys")) {
+					sc = Net.getSSLContext("JKS", is, "passphrase".toCharArray());
+				}
+				var p = ji.factory.create(HttpProtocol.class,
+						Map.of("handler", ji.handler, "sslContext", sc, "useClientMode", false));
+				s = new Server(a, p);
 			}
-			hp.setHandler(a.handler);
-			var s = new Server();
-			s.setAddress(new InetSocketAddress(Integer.parseInt(a.configuration.getProperty("ide.server.port"))));
-			s.setProtocol(hp);
 			s.serve();
 		} catch (Throwable e) {
 			e.printStackTrace();
@@ -91,17 +92,16 @@ public class JanillaIde {
 	public JanillaIde(Properties configuration) {
 		this.configuration = configuration;
 		factory = new Factory();
-		factory.setTypes(Util.getPackageClasses(getClass().getPackageName()).collect(Collectors.toSet()));
+		factory.setTypes(Util.getPackageClasses(getClass().getPackageName()).toList());
 		factory.setSource(this);
-		handler = factory.create(ApplicationHandlerBuilder.class).build();
 		{
-			var pb = factory.create(ApplicationPersistenceBuilder.class);
-			var p = configuration.getProperty("ide.database.file");
+			var p = configuration.getProperty("janilla-ide.database.file");
 			if (p.startsWith("~"))
 				p = System.getProperty("user.home") + p.substring(1);
-			pb.setFile(Path.of(p));
+			var pb = factory.create(ApplicationPersistenceBuilder.class, Map.of("databaseFile", Path.of(p)));
 			persistence = pb.build();
 		}
+		handler = factory.create(ApplicationHandlerBuilder.class).build();
 	}
 
 	public JanillaIde application() {
