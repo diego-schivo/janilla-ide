@@ -17,6 +17,6 @@ entry-tree {
   }
 
   .active {
-    color: lightgray;
+    color: light-dark(darkgray, lightgray);
   }
 }

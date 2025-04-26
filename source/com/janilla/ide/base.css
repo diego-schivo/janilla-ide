@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light dark;
   scrollbar-color: darkgray black;
 }
 
@@ -8,7 +9,7 @@ a {
 }
 
 body {
-  background: black;
+  background: light-dark(white, black);
   color: gray;
   display: flex;
   height: 100vh;

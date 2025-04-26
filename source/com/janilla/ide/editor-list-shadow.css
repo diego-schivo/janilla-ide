@@ -11,5 +11,5 @@ ul {
 }
 
 li.active {
-  color: lightgray;
+  color: light-dark(darkgray, lightgray);
 }
