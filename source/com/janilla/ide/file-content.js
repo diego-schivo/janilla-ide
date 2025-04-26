@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { UpdatableHTMLElement } from "./updatable-html-element.js";
+import { WebComponent } from "./web-component.js";
 
-export default class FileContent extends UpdatableHTMLElement {
+export default class FileContent extends WebComponent {
 
 	static get templateName() {
 		return "file-content";
@@ -61,7 +61,7 @@ export default class FileContent extends UpdatableHTMLElement {
 		if (j) {
 			const s = this.closest("editor-list").state;
 			s.entry = j;
-			this.requestUpdate();
+			this.requestDisplay();
 		}
 	}
 

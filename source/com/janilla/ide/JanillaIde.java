@@ -37,6 +37,7 @@ import javax.net.ssl.SSLContext;
 
 import com.janilla.http.HttpHandler;
 import com.janilla.http.HttpProtocol;
+import com.janilla.json.MapAndType;
 import com.janilla.net.Net;
 import com.janilla.net.Server;
 import com.janilla.reflect.Factory;
@@ -83,22 +84,17 @@ public class JanillaIde {
 
 	public Factory factory;
 
-//	public Persistence persistence;
-
 	public HttpHandler handler;
+
+	public MapAndType.TypeResolver typeResolver;
+
+	public Iterable<Class<?>> types;
 
 	public JanillaIde(Properties configuration) {
 		this.configuration = configuration;
-		factory = new Factory();
-		factory.setTypes(Util.getPackageClasses(getClass().getPackageName()).toList());
-		factory.setSource(this);
-//		{
-//			var p = configuration.getProperty("janilla-ide.database.file");
-//			if (p.startsWith("~"))
-//				p = System.getProperty("user.home") + p.substring(1);
-//			var pb = factory.create(ApplicationPersistenceBuilder.class, Map.of("databaseFile", Path.of(p)));
-//			persistence = pb.build();
-//		}
+		types = Util.getPackageClasses(getClass().getPackageName()).toList();
+		factory = new Factory(types, this);
+		typeResolver = factory.create(MapAndType.DollarTypeResolver.class);
 		handler = factory.create(ApplicationHandlerBuilder.class).build();
 		try {
 			var ps = configuration.getProperty("janilla-ide.workspace.directory");

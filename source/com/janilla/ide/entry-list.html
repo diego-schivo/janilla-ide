@@ -1,18 +1,15 @@
-<template id="shadow">
-  <link rel="stylesheet" href="/entry-list-shadow.css" />
-  <ul>
-    <!--${items}-->
-  </ul>
-  <slot name="content"></slot>
-</template>
+<link rel="stylesheet" href="/entry-list-shadow.css" />
+<ul>
+  <!--${items}-->
+</ul>
+<slot name="content"></slot>
+<!--${articles}-->
 
-<template id="shadow-item">
+<template id="item">
   <li>
     <a href="/entry/${path}" class="${active}">${name}</a>
   </li>
 </template>
-
-<!--${articles}-->
 
 <template id="article">
   <article slot="${slot}">

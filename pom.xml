@@ -4,18 +4,18 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.janilla</groupId>
 	<artifactId>janilla-ide</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<dependencies>
 		<dependency>
 			<groupId>com.janilla</groupId>
 			<artifactId>janilla</artifactId>
-			<version>4.0.0</version>
+			<version>5.0.2-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 	<properties>
 		<maven.compiler.enablePreview>true</maven.compiler.enablePreview>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
-		<maven.compiler.release>23</maven.compiler.release>
+		<maven.compiler.release>24</maven.compiler.release>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<build>

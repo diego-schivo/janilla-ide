@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { UpdatableHTMLElement } from "./updatable-html-element.js";
+import { WebComponent } from "./web-component.js";
 
-export default class EntryList extends UpdatableHTMLElement {
+export default class EntryList extends WebComponent {
 
 	static get templateName() {
 		return "entry-list";
@@ -65,22 +65,21 @@ export default class EntryList extends UpdatableHTMLElement {
 
 	async updateDisplay() {
 		const s = this.closest("root-layout").state;
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
+		const df = this.interpolateDom({
+			$template: "",
 			items: s.paths.map((x, i) => ({
-				$template: "shadow-item",
+				$template: "item",
 				path: x,
 				name: x ? x.split("/").at(-1) : "-",
 				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
-		this.appendChild(this.interpolateDom({
-			$template: "",
+			})),
 			articles: s.paths.map((x, i) => ({
 				$template: "article",
 				slot: i === s.activeIndex ? "content" : null,
 				path: x
 			}))
-		}));
+		});
+		this.shadowRoot.append(...df.querySelectorAll("link, ul, slot"));
+		this.appendChild(df);
 	}
 }

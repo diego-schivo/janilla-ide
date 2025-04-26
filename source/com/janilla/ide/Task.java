@@ -24,7 +24,6 @@
 package com.janilla.ide;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 
 public interface Task {
 
@@ -36,6 +35,6 @@ public interface Task {
 
 	interface Builder {
 
-		Task start() throws IOException;
+		Task start();
 	}
 }

@@ -26,7 +26,6 @@ import EditorList from "./editor-list.js";
 import EntryList from "./entry-list.js";
 import EntryTree from "./entry-tree.js";
 import FileContent from "./file-content.js";
-import FileExecution from "./file-execution.js";
 import OutputArea from "./output-area.js";
 import RootLayout from "./root-layout.js";
 
@@ -35,6 +34,5 @@ customElements.define("editor-list", EditorList);
 customElements.define("entry-list", EntryList);
 customElements.define("entry-tree", EntryTree);
 customElements.define("file-content", FileContent);
-customElements.define("file-execution", FileExecution);
 customElements.define("output-area", OutputArea);
 customElements.define("root-layout", RootLayout);

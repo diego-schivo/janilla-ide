@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { UpdatableHTMLElement } from "./updatable-html-element.js";
+import { WebComponent } from "./web-component.js";
 
-export default class EntryTree extends UpdatableHTMLElement {
+export default class EntryTree extends WebComponent {
 
 	static get templateName() {
 		return "entry-tree";

@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -39,12 +38,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.UnaryOperator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.janilla.json.Converter;
+import com.janilla.json.MapAndType;
 import com.janilla.web.Bind;
 import com.janilla.web.Handle;
 
@@ -53,6 +52,8 @@ public class EntryApi {
 	protected static final Pattern HEAD = Pattern.compile("^ref: refs/heads/([\\w-]+)", Pattern.MULTILINE);
 
 	protected static final Pattern MODULE = Pattern.compile("^module ([\\w.]+)", Pattern.MULTILINE);
+
+	protected static final Map<Path, Task> RUN_TASKS = new ConcurrentHashMap<>();
 
 	public Properties configuration;
 
@@ -91,28 +92,10 @@ public class EntryApi {
 			return new File(n, Files.readString(p));
 	}
 
-//	@Handle(method = "POST", path = "/api/entries/(.*)")
-//	public Entry create(Path path, @Bind(resolver = EntryResolver.class) Entry entry)
-//			throws IOException, InterruptedException {
-//		var d = workspaceDirectory();
-//		if (path != null)
-//			d = d.resolve(path);
-//		var e = d.resolve(entry.name());
-//		switch (entry) {
-//		case Directory _:
-//			Files.createDirectory(e);
-//			break;
-//		case File _:
-//			Files.createFile(e);
-//			break;
-//		}
-//		OutputApi.QUEUE.put("event: refresh-directory\ndata: {\"path\": \"" + path + "\"}\n\n");
-//		return entry;
-//	}
-
 	@Handle(method = "PUT", path = "/api/entries/(.*)")
-	public Entry update(Path path, @Bind(resolver = EntryResolver.class) Entry entry, Update update)
+	public Entry update(Path path, @Bind(resolver = MapAndType.DollarTypeResolver.class) Entry entry, Update update)
 			throws IOException, InterruptedException {
+//		System.out.println("EntryApi.update, path=" + path);
 		var wd = workspaceDirectory();
 		var p = path != null ? wd.resolve(path) : wd;
 		switch (entry) {
@@ -132,13 +115,33 @@ public class EntryApi {
 			} else
 				switch (update.action) {
 				case "run":
+					var t = RUN_TASKS.compute(path, (_, v) -> {
+						if (v != null)
+							v.destroy();
+						return runBuilder(path).start();
+					});
 					Thread.startVirtualThread(() -> {
 						try {
-							run(path);
-						} catch (IOException | InterruptedException e) {
+							var r = t.inputReader();
+							for (;;) {
+								var l = r != null ? r.readLine() : null;
+								if (l == null)
+									break;
+								OutputApi.QUEUE.put(new Event(null, l));
+							}
+							t.waitFor();
+						} catch (Exception e) {
 							throw new RuntimeException(e);
+						} finally {
+							RUN_TASKS.remove(path);
 						}
 					});
+					break;
+				case "terminate":
+					var t2 = RUN_TASKS.remove(path);
+//					System.out.println("EntryApi.update, t2=" + t2);
+					if (t2 != null)
+						t2.destroy();
 					break;
 				}
 			break;
@@ -153,8 +156,26 @@ public class EntryApi {
 				OutputApi.QUEUE.put(new Event("refresh-directory", path != null ? Map.of("path", path) : null));
 				break;
 			case "delete":
-				for (var n : update.names)
-					Files.delete(p.resolve(n));
+				for (var n : update.names) {
+					var s = p.resolve(n);
+					if (Files.isDirectory(s))
+						Files.walkFileTree(s, new SimpleFileVisitor<>() {
+
+							@Override
+							public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+								Files.delete(file);
+								return FileVisitResult.CONTINUE;
+							}
+
+							@Override
+							public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+								Files.delete(dir);
+								return FileVisitResult.CONTINUE;
+							}
+						});
+					else
+						Files.delete(s);
+				}
 				OutputApi.QUEUE.put(new Event("refresh-directory", path != null ? Map.of("path", path) : null));
 				break;
 			case "clone": {
@@ -171,7 +192,7 @@ public class EntryApi {
 							OutputApi.QUEUE.put(new Event(null, l));
 						}
 						OutputApi.QUEUE.put(new Event("refresh-directory", path != null ? Map.of("path", path) : null));
-					} catch (IOException | InterruptedException e) {
+					} catch (Exception e) {
 						throw new RuntimeException(e);
 					}
 				});
@@ -191,7 +212,7 @@ public class EntryApi {
 							OutputApi.QUEUE.put(new Event(null, l));
 						}
 						OutputApi.QUEUE.put(new Event("refresh-directory", path != null ? Map.of("path", path) : null));
-					} catch (IOException | InterruptedException e) {
+					} catch (Exception e) {
 						throw new RuntimeException(e);
 					}
 				});
@@ -217,28 +238,32 @@ public class EntryApi {
 		return Path.of(ps);
 	}
 
-	protected void run(Path path) throws IOException, InterruptedException {
+	protected Task.Builder runBuilder(Path path) {
 		var wd = workspaceDirectory();
 		var fp = wd.resolve(path);
 		if (!Files.isRegularFile(fp) || !fp.getFileName().toString().endsWith(".java"))
 			throw new IllegalArgumentException("path");
 		var jd = jdkDirectory();
 		var msp = new LinkedHashMap<String, Path>();
-		Files.walkFileTree(wd, new SimpleFileVisitor<>() {
+		try {
+			Files.walkFileTree(wd, new SimpleFileVisitor<>() {
 
-			@Override
-			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-				var p = dir.resolve("module-info.java");
-				if (Files.isRegularFile(p)) {
-					var s = Files.readString(p);
-					var m = MODULE.matcher(s);
-					m.find();
-					msp.put(m.group(1), wd.relativize(dir));
-					return FileVisitResult.SKIP_SUBTREE;
+				@Override
+				public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+					var p = dir.resolve("module-info.java");
+					if (Files.isRegularFile(p)) {
+						var s = Files.readString(p);
+						var m = MODULE.matcher(s);
+						m.find();
+						msp.put(m.group(1), wd.relativize(dir));
+						return FileVisitResult.SKIP_SUBTREE;
+					}
+					return FileVisitResult.CONTINUE;
 				}
-				return FileVisitResult.CONTINUE;
-			}
-		});
+			});
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 		var msp1 = msp.entrySet().stream().filter(x -> path.startsWith(x.getValue())).findFirst().orElse(null);
 		var mn = msp1.getKey();
 		var sd = msp1.getValue();
@@ -247,12 +272,15 @@ public class EntryApi {
 				msp.keySet().stream().collect(Collectors.joining(","))));
 		c.addAll(msp.entrySet().stream()
 				.flatMap(x -> Stream.of("--module-source-path", x.getKey() + "=" + x.getValue())).toList());
-		c.addAll(List.of("-parameters", "--release", "23"));
-		var pb = new ProcessBuilder(c);
-		pb.directory(wd.toFile()).redirectErrorStream(true);
-		var tbb = new ArrayDeque<Task.Builder>();
-		tbb.add(new ProcessTask.Builder(pb));
-		tbb.add(new ThreadTask.Builder(() -> {
+		c.addAll(List.of("-parameters", "--release", "24"));
+		var pb1 = new ProcessBuilder(c);
+		pb1.directory(wd.toFile()).redirectErrorStream(true);
+		var ps = sd.relativize(path).toString();
+		var cn = ps.substring(0, ps.length() - ".java".length()).replace('/', '.');
+		var pb2 = new ProcessBuilder(jd.resolve("bin/java").toString(), "--module-path", "target", "--enable-preview",
+				"--module", mn + "/" + cn);
+		pb2.directory(wd.toFile()).redirectErrorStream(true);
+		var tbb = new ChainingTask.Builder(new ProcessTask.Builder(pb1), new ThreadTask.Builder(() -> {
 			for (var x : msp.entrySet())
 				try {
 					Files.walkFileTree(wd.resolve(x.getValue()), new SimpleFileVisitor<>() {
@@ -277,38 +305,22 @@ public class EntryApi {
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
-		}));
-		var ps = sd.relativize(path).toString();
-		var cn = ps.substring(0, ps.length() - ".java".length()).replace('/', '.');
-		pb = new ProcessBuilder(jd.resolve("bin/java").toString(), "--module-path", "target", "--enable-preview",
-				"--module", mn + "/" + cn);
-		pb.directory(wd.toFile()).redirectErrorStream(true);
-		tbb.add(new ProcessTask.Builder(pb));
-		var task = tbb.remove().start();
-		for (;;) {
-			var ir = task.inputReader();
-			var l = ir != null ? ir.readLine() : null;
-			if (l != null)
-				OutputApi.QUEUE.put(new Event(null, l));
-			else if (task.waitFor() == 0 && !tbb.isEmpty())
-				task = tbb.remove().start();
-			else
-				break;
-		}
+		}), new ProcessTask.Builder(pb2));
+		return tbb;
 	}
 
-	public static class EntryResolver implements UnaryOperator<Converter.MapType> {
-
-		@Override
-		public Converter.MapType apply(Converter.MapType mt) {
-			var t = switch ((String) mt.map().get("$type")) {
-			case "Directory" -> Directory.class;
-			case "File" -> File.class;
-			default -> throw new RuntimeException();
-			};
-			return new Converter.MapType(mt.map(), t);
-		}
-	}
+//	public static class EntryResolver implements UnaryOperator<Converter.MapType> {
+//
+//		@Override
+//		public Converter.MapType apply(Converter.MapType mt) {
+//			var t = switch ((String) mt.map().get("$type")) {
+//			case "Directory" -> Directory.class;
+//			case "File" -> File.class;
+//			default -> throw new RuntimeException();
+//			};
+//			return new Converter.MapType(mt.map(), t);
+//		}
+//	}
 
 	public record Update(String action, Path path, Set<String> names, String url, String branch) {
 	}

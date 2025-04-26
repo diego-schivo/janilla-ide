@@ -1,4 +1,5 @@
 entry-tree {
+  border-right: 1px solid gray;
   overflow: auto;
 
   ul {

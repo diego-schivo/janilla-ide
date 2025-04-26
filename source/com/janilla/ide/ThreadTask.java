@@ -24,13 +24,13 @@
 package com.janilla.ide;
 
 import java.io.BufferedReader;
-import java.io.IOException;
+import java.io.Reader;
 
 public record ThreadTask(Thread thread) implements Task {
 
 	@Override
 	public BufferedReader inputReader() {
-		return null;
+		return new BufferedReader(Reader.nullReader());
 	}
 
 	@Override
@@ -47,7 +47,7 @@ public record ThreadTask(Thread thread) implements Task {
 	public record Builder(Runnable runnable) implements Task.Builder {
 
 		@Override
-		public Task start() throws IOException {
+		public Task start() {
 			return new ThreadTask(Thread.startVirtualThread(runnable));
 		}
 	}

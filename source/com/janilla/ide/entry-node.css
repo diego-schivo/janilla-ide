@@ -1,8 +1,0 @@
-entry-node {
-  display: block;
-
-  &[data-active] > a {
-    background: gray;
-    color: black;
-  }
-}

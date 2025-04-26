@@ -1,18 +1,15 @@
-<template id="shadow">
-  <link rel="stylesheet" href="/editor-list-shadow.css" />
-  <slot name="content"></slot>
-  <ul>
-    <!--${items}-->
-  </ul>
-</template>
+<link rel="stylesheet" href="/editor-list-shadow.css" />
+<slot name="content"></slot>
+<ul>
+  <!--${items}-->
+</ul>
+<!--${articles}-->
 
-<template id="shadow-item">
+<template id="item">
   <li class="${active}">
     <a href="#">${name}</a>
   </li>
 </template>
-
-<!--${articles}-->
 
 <template id="article-directory-content">
   <article slot="${slot}">

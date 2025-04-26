@@ -21,46 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { FlexibleElement } from "./flexible-element.js";
+package com.janilla.ide;
 
-export default class EntryManager extends FlexibleElement {
+import com.janilla.json.MapAndType;
+import com.janilla.web.MethodHandlerFactory;
 
-	static get templateName() {
-		return "entry-manager";
-	}
+public class CustomMethodHandlerFactory extends MethodHandlerFactory {
 
-	constructor() {
-		super();
-	}
+	public MapAndType.DollarTypeResolver typeResolver;
 
-	connectedCallback() {
-		// console.log("EntryManager.connectedCallback");
-		super.connectedCallback();
-		this.addEventListener("submit", this.handleSubmit);
-	}
-
-	disconnectedCallback() {
-		// console.log("EntryManager.disconnectedCallback");
-		this.removeEventListener("submit", this.handleSubmit);
-	}
-
-	handleSubmit = async event => {
-		// console.log("EntryManager.handleSubmit", event);
-		event.preventDefault();
-		event.stopPropagation();
-		const s = this.state;
-		Object.assign(s, await (await fetch(`/api/files/${s.path}`, {
-			method: "PUT",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify(Object.fromEntries(new FormData(event.target)))
-		})).json());
-		this.requestUpdate();
-	}
-
-	async updateDisplay() {
-		// console.log("EntryManager.updateDisplay");
-		this.appendChild(this.interpolateDom({
-			$template: ""
-		}));
+	@Override
+	protected MapAndType.TypeResolver resolver(Class<? extends MapAndType.TypeResolver> class0) {
+		if (class0 == MapAndType.DollarTypeResolver.class)
+			return typeResolver;
+		return super.resolver(class0);
 	}
 }

@@ -25,6 +25,7 @@ package com.janilla.ide;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 public record ProcessTask(Process process) implements Task {
 
@@ -40,14 +41,21 @@ public record ProcessTask(Process process) implements Task {
 
 	@Override
 	public void destroy() {
+//		System.out.println("ProcessTask.destroy, process.info()=" + process.info());
 		process.destroy();
 	}
 
 	public record Builder(ProcessBuilder builder) implements Task.Builder {
 
 		@Override
-		public Task start() throws IOException {
-			return new ProcessTask(builder.start());
+		public Task start() {
+			try {
+				var p = builder.start();
+//				System.out.println("ProcessTask.Builder.start, p.info()=" + p.info());
+				return new ProcessTask(p);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
 		}
 	}
 }

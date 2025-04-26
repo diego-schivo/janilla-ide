@@ -4,6 +4,10 @@
 ul {
   display: flex;
   gap: 1rem;
+
+  &:has(> :only-child) {
+    display: none;
+  }
 }
 
 li.active {

@@ -1,7 +1,13 @@
 output-area {
+  border-top: 1px solid gray;
+
   &,
   textarea {
     display: flex;
     flex: 1;
+  }
+
+  textarea {
+    border: none;
   }
 }

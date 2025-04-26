@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { UpdatableHTMLElement } from "./updatable-html-element.js";
+import { WebComponent } from "./web-component.js";
 
-export default class EditorList extends UpdatableHTMLElement {
+export default class EditorList extends WebComponent {
 
 	static get observedAttributes() {
 		return ["data-path"];
@@ -57,33 +57,33 @@ export default class EditorList extends UpdatableHTMLElement {
 		event.preventDefault();
 		event.stopPropagation();
 		this.state.activeIndex = Array.prototype.indexOf.call(ul.children, a.closest("li"));
-		this.requestUpdate();
+		this.requestDisplay();
 	}
 
 	async updateDisplay() {
 		const p = this.dataset.path ?? null;
 		const s = this.state;
 		if (p !== s.path) {
-			this.shadowRoot.appendChild(this.interpolateDom({ $template: "shadow" }));
-			this.appendChild(this.interpolateDom({ $template: "" }));
+			const df = this.interpolateDom({ $template: "" });
+			this.shadowRoot.append(...df.querySelectorAll("link, slot, ul"));
+			this.appendChild(df);
 			s.path = p;
 			s.entry = await (await fetch(`/api/entries/${p ?? ""}`)).json();
 		}
-		const nn = s.entry.entries ? ["directory-content"] : ["file-content", "file-execution"];
-		this.shadowRoot.appendChild(this.interpolateDom({
-			$template: "shadow",
+		const nn = s.entry.entries ? ["directory-content"] : ["file-content"];
+		const df = this.interpolateDom({
+			$template: "",
 			items: nn.map((x, i) => ({
-				$template: "shadow-item",
+				$template: "item",
 				name: x,
 				active: i === s.activeIndex ? "active" : null
-			}))
-		}));
-		this.appendChild(this.interpolateDom({
-			$template: "",
+			})),
 			articles: nn.map((x, i) => ({
 				$template: `article-${x}`,
 				slot: i === s.activeIndex ? "content" : null
 			}))
-		}));
+		});
+		this.shadowRoot.append(...df.querySelectorAll("link, slot, ul"));
+		this.appendChild(df);
 	}
 }
