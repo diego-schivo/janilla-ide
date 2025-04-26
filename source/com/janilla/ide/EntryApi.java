@@ -276,7 +276,7 @@ public class EntryApi {
 		var pb1 = new ProcessBuilder(c);
 		pb1.directory(wd.toFile()).redirectErrorStream(true);
 		var ps = sd.relativize(path).toString();
-		var cn = ps.substring(0, ps.length() - ".java".length()).replace('/', '.');
+		var cn = ps.substring(0, ps.length() - ".java".length()).replace(java.io.File.separatorChar, '.');
 		var pb2 = new ProcessBuilder(jd.resolve("bin/java").toString(), "--module-path", "target", "--enable-preview",
 				"--module", mn + "/" + cn);
 		pb2.directory(wd.toFile()).redirectErrorStream(true);
